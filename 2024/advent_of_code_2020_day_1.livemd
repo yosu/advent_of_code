@@ -1,4 +1,4 @@
-# Aoc 2024 - Day 1
+# Advent of Code 2024 - Day 1
 
 ```elixir
 Mix.install([
@@ -27,7 +27,7 @@ Example input / output
 11
 ```
 
-## Part 1
+## Part One
 
 ```elixir
 input = Kino.Input.textarea("Please the inputs:")

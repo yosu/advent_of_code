@@ -1,0 +1,81 @@
+# Advent of Code 2024 - Day 2
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 2: Red-Nosed Reports
+
+https://adventofcode.com/2024/day/2
+
+## Part One
+
+Example input / output
+
+```
+7 6 4 2 1
+1 2 7 8 9
+9 7 6 2 1
+1 3 2 4 5
+8 6 4 4 1
+1 3 6 7 9
+```
+
+```
+2
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the inputs:")
+```
+
+```elixir
+defmodule Day2 do
+  def calc(list) do
+    list
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.reduce_while(:undefined, &calc/2)
+    |> fn s -> if s == :unsafe do :unsafe else :safe end end.()
+  end
+
+  defp calc([a, b], _any) when abs(a - b) < 1 or abs(a - b) > 3, do: {:halt, :unsafe}
+  defp calc([a, b], :undefined) when a > b, do: {:cont, :dec}
+  defp calc([a, b], :dec) when a < b, do: {:halt, :unsafe}
+  defp calc([a, b], :undefined) when a < b, do: {:cont, :inc}
+  defp calc([a, b], :inc) when a > b, do: {:halt, :unsafe}
+  defp calc(_val, state), do: {:cont, state}
+end
+
+input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&(String.split(&1, " ", trim: true)))
+|> Enum.map(&Enum.map(&1, fn v -> String.to_integer(v) end))
+#|> Enum.map(&Enum.chunk_every(&1, 2, 1, :discard))
+|> Enum.map(&Day2.calc/1)
+|> Enum.frequencies()
+```
+
+## Part Two
+
+```elixir
+input = Kino.Input.textarea("Please paste the inputs:")
+```
+
+```elixir
+reports = input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&(String.split(&1, " ", trim: true)))
+|> Enum.map(&Enum.map(&1, fn v -> String.to_integer(v) end))
+
+reports
+|> Enum.map(&Enum.with_index/1)
+|> Enum.map(&Enum.map(0..(length(&1) -1), fn i -> Enum.reject(&1, fn {_v, j} -> i == j end) end))
+|> Enum.map(&Enum.map(&1, fn l -> Enum.map(l, fn {v, _i} -> v end) end))
+|> Enum.map(&Enum.map(&1, fn r -> Day2.calc(r) end))
+|> Enum.map(&Enum.reduce_while(&1, :unsafe, fn s, acc -> if s == :safe do {:halt, :safe} else {:cont, acc} end end))
+|> Enum.frequencies()
+```
