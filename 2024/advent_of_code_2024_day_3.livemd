@@ -1,0 +1,305 @@
+# Advent of Code 2024 - Day 3
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 3: Mull It Over
+
+Example input / output
+
+```
+xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))
+```
+
+```
+161
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day3 do
+  def parse_digit(<<char, rest::bitstring>>) when char >= ?0 and char <= ?9,
+    do: {:ok, [char - ?0], rest}
+  def parse_digit(<<_char, rest::binary>>), do: {:error, :wrong_input, rest}
+  def parse_digit(_), do: {:error, :eol, <<>>}
+
+  def parse_char(char, <<char, rest::binary>>),
+    do: {:ok, [], rest}
+  def parse_char(_, <<_char, rest::binary>>), do: {:error, :invalid, rest}
+
+
+  def concat(fun, fun2) do
+    fn x ->
+      case fun.(x) do
+        {:ok, parsed, rest} ->
+          case fun2.(rest) do
+            {:ok, parsed2, rest2} ->
+              {:ok, parsed ++ parsed2, rest2}
+            {err, kind, _rest2} -> 
+              {err, kind, rest}
+          end
+
+        err -> 
+          err
+      end
+    end
+  end
+
+  def choice(fun1, fun2) do
+    fn x ->
+      case {fun1.(x), fun2.(x)} do
+        {{:ok, parsed, rest}, _ } -> {:ok, parsed, rest}
+        {_, {:ok, parsed, rest}} -> {:ok, parsed, rest}
+        {err1, _err2} -> err1
+      end
+    end
+  end
+  
+  def digit_parser() do
+    fn x -> parse_digit(x) end
+  end
+
+  def two_digits() do
+    parser = fn ->
+      digit_parser()
+      |> concat(digit_parser())
+    end
+
+    fn x ->
+      case parser.().(x) do
+        {:ok, [a, b | parsed], rest} -> {:ok, [a*10+b | parsed], rest}
+        err -> err          
+      end
+    end
+  end
+
+  def three_digits() do
+    parser = fn ->
+      digit_parser()
+      |> concat(digit_parser())
+      |> concat(digit_parser())
+    end
+    
+    fn x ->
+      case parser.().(x) do
+        {:ok, [a, b, c | parsed], rest} -> {:ok, [a*100+b*10+c | parsed], rest}
+        err -> err          
+      end
+    end
+  end
+
+  def number() do
+    choice(three_digits(), two_digits())
+    |> choice(digit_parser())
+  end
+
+  def char_parser(c) do
+    fn x -> parse_char(c, x) end
+  end
+
+  def mul() do
+    char_parser(?m)
+    |> concat(char_parser(?u))
+    |> concat(char_parser(?l))
+  end
+
+  def multiply() do
+    mul()
+    |> concat(char_parser(?())
+    |> concat(number())
+    |> concat(char_parser(?,))
+    |> concat(number())
+    |> concat(char_parser(?)))
+  end
+
+  def parse("", n), do: n
+  def parse(s, n) do
+    case multiply().(s) do
+      {:ok, [a, b], rest} -> parse(rest, a*b + n)
+      {:error, _message, rest} -> parse(rest, n)
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Day3.parse(0)
+```
+
+## Part Two
+
+Example input / output
+
+```
+xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))
+```
+
+```
+48
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  def parse_digit(<<char, rest::bitstring>>) when char >= ?0 and char <= ?9,
+    do: {:ok, [char - ?0], rest}
+  def parse_digit(<<_char, rest::binary>>), do: {:error, :wrong_input, rest}
+  def parse_digit(_), do: {:error, :eol, <<>>}
+
+  def parse_char(char, <<char, rest::binary>>),
+    do: {:ok, [], rest}
+  def parse_char(_, <<_char, rest::binary>>), do: {:error, :invalid, rest}
+
+
+  def concat(fun, fun2) do
+    fn x ->
+      case fun.(x) do
+        {:ok, parsed, rest} ->
+          case fun2.(rest) do
+            {:ok, parsed2, rest2} ->
+              {:ok, parsed ++ parsed2, rest2}
+            {err, kind, _rest2} -> 
+              {err, kind, rest}
+          end
+
+        err -> 
+          err
+      end
+    end
+  end
+
+  def choice(fun1, fun2) do
+    fn x ->
+      case {fun1.(x), fun2.(x)} do
+        {{:ok, parsed, rest}, _ } -> {:ok, parsed, rest}
+        {_, {:ok, parsed, rest}} -> {:ok, parsed, rest}
+        {err1, _err2} -> err1
+      end
+    end
+  end
+  
+  def digit_parser() do
+    fn x -> parse_digit(x) end
+  end
+
+  def two_digits() do
+    parser = fn ->
+      digit_parser()
+      |> concat(digit_parser())
+    end
+
+    fn x ->
+      case parser.().(x) do
+        {:ok, [a, b | parsed], rest} -> {:ok, [a*10+b | parsed], rest}
+        err -> err          
+      end
+    end
+  end
+
+  def three_digits() do
+    parser = fn ->
+      digit_parser()
+      |> concat(digit_parser())
+      |> concat(digit_parser())
+    end
+    
+    fn x ->
+      case parser.().(x) do
+        {:ok, [a, b, c | parsed], rest} -> {:ok, [a*100+b*10+c | parsed], rest}
+        err -> err          
+      end
+    end
+  end
+
+  def number() do
+    choice(three_digits(), two_digits())
+    |> choice(digit_parser())
+  end
+
+  def char_parser(c) do
+    fn x -> parse_char(c, x) end
+  end
+
+  def mul() do
+    char_parser(?m)
+    |> concat(char_parser(?u))
+    |> concat(char_parser(?l))
+  end
+
+  def multiply() do
+    mul()
+    |> concat(char_parser(?())
+    |> concat(number())
+    |> concat(char_parser(?,))
+    |> concat(number())
+    |> concat(char_parser(?)))
+  end
+
+  def dont() do
+    parser = fn ->
+      char_parser(?d)
+      |> concat(char_parser(?o))
+      |> concat(char_parser(?n))
+      |> concat(char_parser(?'))
+      |> concat(char_parser(?t))
+      |> concat(char_parser(?())
+      |> concat(char_parser(?)))
+    end
+    
+    fn x ->
+      case parser.().(x) do
+        {:ok, [], rest} -> {:ok, false, rest}
+        err -> err          
+      end
+    end
+  end
+
+  def do_parser() do
+    parser = fn ->
+      char_parser(?d)
+      |> concat(char_parser(?o))
+      |> concat(char_parser(?())
+      |> concat(char_parser(?)))
+    end
+    
+    fn x ->
+      case parser.().(x) do
+        {:ok, [], rest} -> {:ok, true, rest}
+        err -> err          
+      end
+    end
+  end
+
+  def multiply_or_dont() do
+    choice(multiply(), dont())
+  end
+
+  def parse("", _any, n), do: n
+  def parse(s, true, n) do
+    case multiply_or_dont().(s) do
+      {:ok, [a, b], rest} -> parse(rest, true, a*b + n)
+      {:ok, false, rest} -> parse(rest, false, n)
+      {:error, _message, rest} -> parse(rest, true, n)
+    end
+  end
+  def parse(s, false, n) do
+    case do_parser().(s) do
+      {:ok, true, rest} -> parse(rest, true, n)
+      {:error, _message, rest} -> parse(rest, false, n)
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Part2.parse(true, 0)
+```
