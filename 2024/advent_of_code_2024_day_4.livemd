@@ -1,0 +1,123 @@
+# Advent of Code 2024 - Day 4
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 4: Ceres Search
+
+Example input / output
+
+```
+MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX
+```
+
+```
+18
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+lls = input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&String.to_charlist/1)
+|> Enum.map(&(Enum.with_index(&1)))
+|> Enum.with_index()
+
+m = for {ls, y} <- lls, {v, x} <- ls, into: %{} do
+  {{x, y}, v}
+end
+
+h = length(lls)
+w = length(elem(hd(lls), 0))
+
+hsum = for x <- 0..(w-4), y <- 0..(h-1) do
+  v = [m[{x, y}], m[{x+1, y}], m[{x+2, y}], m[{x+3, y}]]
+  if v == ~c"XMAS" or v == ~c"SAMX" do 1 else 0 end
+end
+|> Enum.sum()
+
+vsum = for x <- 0..(w-1), y <- 0..(h-4) do
+  v = [m[{x, y}], m[{x, y+1}], m[{x, y+2}], m[{x, y+3}]]
+  if v == ~c"XMAS" or v == ~c"SAMX" do 1 else 0 end
+end
+|> Enum.sum()
+
+tldrsum = for x <- 0..(w-4), y <- 0..(h-4) do
+  v = [m[{x, y}], m[{x+1, y+1}], m[{x+2, y+2}], m[{x+3, y+3}]]
+  if v == ~c"XMAS" or v == ~c"SAMX" do 1 else 0 end
+end
+|> Enum.sum()
+
+trdlsum = for x <- 3..(w-1), y <- 0..(h-4) do
+  v = [m[{x, y}], m[{x-1, y+1}], m[{x-2, y+2}], m[{x-3, y+3}]]
+  if v == ~c"XMAS" or v == ~c"SAMX" do 1 else 0 end
+end
+|> Enum.sum()
+
+hsum + vsum + tldrsum + trdlsum
+```
+
+## Part Two
+
+Example input / output
+
+```
+.M.S......
+..A..MSMS.
+.M.S.MAA..
+..A.ASMSM.
+.M.S.M....
+..........
+S.S.S.S.S.
+.A.A.A.A..
+M.M.M.M.M.
+..........
+```
+
+```
+9
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+lls = input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&String.to_charlist/1)
+|> Enum.map(&(Enum.with_index(&1)))
+|> Enum.with_index()
+
+m = for {ls, y} <- lls, {v, x} <- ls, into: %{} do
+  {{x, y}, v}
+end
+
+h = length(lls)
+w = length(elem(hd(lls), 0))
+
+for x <- 0..(w-3), y <- 0..(h-3) do
+  a = [m[{x, y}], m[{x+1, y+1}], m[{x+2, y+2}]]
+  b = [m[{x+2, y}], m[{x+1, y+1}], m[{x, y+2}]]
+  if (a == ~c"MAS" || a == ~c"SAM") && (b == ~c"MAS" || b == ~c"SAM") do 1 else 0 end
+end
+|> Enum.sum()
+
+```
