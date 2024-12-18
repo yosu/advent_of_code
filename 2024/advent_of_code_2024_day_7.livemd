@@ -1,0 +1,178 @@
+# Advent of Code 2024 - Day 7
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 7: Bridge Repair
+
+https://adventofcode.com/2024/day/7
+
+<!-- livebook:{"break_markdown":true} -->
+
+Example input / output
+
+```
+190: 10 19
+3267: 81 40 27
+83: 17 5
+156: 15 6
+7290: 6 8 6 15
+161011: 16 10 13
+192: 17 8 14
+21037: 9 7 18 13
+292: 11 6 16 20
+```
+
+```
+3749
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day7 do
+  defstruct [:value, :numbers]
+
+  @ops %{
+    0 => &Kernel.+/2,
+    1 => &Kernel.*/2
+  }
+
+  def from_input(str) do
+    [v, ns] = String.split(str, ": ", trim: true)
+    value = v |> String.to_integer()
+    numbers = ns
+      |> String.split(" ", trim: true)
+      |> Enum.map(&String.to_integer/1)
+
+    %__MODULE__{value: value, numbers: numbers}
+  end
+
+  def gen_ops(numbers) do    
+    n = length(numbers)
+
+    if n >= 16 do raise "numbers too much" end
+    
+    Enum.map(0..(2**(n-1)-1), &(for <<bit::1 <- << &1::16 >> >>, do: bit))
+    |> Enum.map(&Enum.reverse/1)
+    |> Enum.map(&(Enum.take(&1, n-1)))
+    |> Enum.map(&(Enum.map(&1, fn v -> @ops[v] end)))
+  end
+
+  def calc(%__MODULE__{value: value, numbers: ns}) do
+    gen_ops(ns)
+    |> Enum.map(&(Enum.zip_reduce(&1,
+      tl(ns),
+      hd(ns),
+      fn op, n, acc -> op.(acc, n) end)))
+    |> Enum.reduce_while(0, fn v, acc ->
+      case v do
+        ^value -> {:halt, value}
+        _ -> {:cont, acc}
+      end
+    end)
+  end
+end
+
+input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&Day7.from_input/1)
+|> Enum.map(&Day7.calc/1)
+|> Enum.sum()
+```
+
+## Part Two
+
+Example input / output
+
+```
+190: 10 19
+3267: 81 40 27
+83: 17 5
+156: 15 6
+7290: 6 8 6 15
+161011: 16 10 13
+192: 17 8 14
+21037: 9 7 18 13
+292: 11 6 16 20
+```
+
+```
+11387
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  defstruct [:value, :numbers]
+
+  def concat(a, b) do    
+    Integer.to_string(a) <> Integer.to_string(b)
+    |> String.to_integer()
+  end
+
+  @ops %{
+    0 => &Kernel.+/2,
+    1 => &Kernel.*/2,
+    2 => &Part2.concat/2
+  }
+
+  def from_input(str) do
+    [v, ns] = String.split(str, ": ", trim: true)
+    value = v |> String.to_integer()
+    numbers = ns
+      |> String.split(" ", trim: true)
+      |> Enum.map(&String.to_integer/1)
+
+    %__MODULE__{value: value, numbers: numbers}
+  end
+
+  def three(n, count) do
+    n
+    |> rem(3**count)
+    |> Integer.to_string(3)
+    |> String.pad_leading(count, "0")
+    |> String.split("", trim: true)
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  def gen_ops(numbers) do    
+    n = length(numbers)
+
+    0..(3**(n-1)-1)
+    |> Enum.map(&(Part2.three(&1, n-1)))
+    |> Enum.map(&(Enum.map(&1, fn v -> @ops[v] end)))
+  end
+
+  def calc(%__MODULE__{value: value, numbers: ns}) do
+    gen_ops(ns)
+    |> Enum.map(&(Enum.zip_reduce(&1,
+      tl(ns),
+      hd(ns),
+      fn op, n, acc -> op.(acc, n) end)))
+    |> Enum.reduce_while(0, fn v, acc ->
+      case v do
+        ^value -> {:halt, value}
+        _ -> {:cont, acc}
+      end
+    end)
+  end
+end
+
+
+input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&Part2.from_input/1)
+|> Enum.map(&Part2.calc/1)
+|> Enum.sum()
+```
