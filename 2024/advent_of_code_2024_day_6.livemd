@@ -1,0 +1,276 @@
+# Advent of Code 2024 - Day 6
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 6: Guard Gallivant
+
+https://adventofcode.com/2024/day/6
+
+<!-- livebook:{"break_markdown":true} -->
+
+Example input / output
+
+```
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...
+```
+
+```
+41
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day6 do
+  defstruct [:h, :w, :map, :position, :direction, :route]
+
+  def from_input(input) do
+    m = input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&(String.split(&1, "", trim: true)))
+    
+    h = length(m)
+    w = length(hd(m))
+    
+    mi = m
+    |> Enum.map(&(Enum.with_index(&1)))
+    |> Enum.with_index()
+    
+    map = for {ls, y} <- mi, {v, x} <- ls, into: %{} do
+      {{x, y}, v}
+    end
+
+    position = start_position(map) 
+
+    %__MODULE__{h: h, w: w, map: map, position: position, direction: :up, route: MapSet.new([position])}
+  end
+
+  def start_position(map) do
+    map
+    |> Enum.reduce_while(:undefined, fn {k, v}, acc ->
+      case v do
+        "^" -> {:halt, k}
+        _ -> {:cont, acc}
+          end
+    end)
+  end
+
+  def next_position(%{position: {x, y}, direction: d}) do
+    case d do
+      :up -> {x, y-1}
+      :down -> {x, y+1}
+      :left -> {x-1, y}
+      :right -> {x+1, y}        
+    end
+  end
+
+  def next_direction(dir) do
+    case dir do
+      :up -> :right
+      :down -> :left
+      :left -> :up
+      :right -> :down
+    end    
+  end
+
+  def out_of_map?(%{w: w, h: h}, {x, y}) when x < 0 or y < 0 or x >= w or y >= h,
+    do: true
+  def out_of_map?(_, _), do: false
+
+  def obstructions?(%{map: map}, pos) do
+    map[pos] == "#"
+  end
+
+  def routes(%__MODULE__{direction: dir, route: route} = m) do
+    pos = Day6.next_position(m)
+    cond do
+      out_of_map?(m, pos) ->
+        MapSet.size(m.route)
+      obstructions?(m, pos) ->
+        routes(%__MODULE__{m | direction: next_direction(dir)})
+      true ->
+        routes(%__MODULE__{m | position: pos, route: MapSet.put(route, pos)})
+    end
+  end
+end
+
+Day6.from_input(Kino.Input.read(input))
+|> Day6.routes()
+
+
+```
+
+## Part Two
+
+Example input / output
+
+```
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...
+```
+
+```
+6
+```
+
+result should be four
+
+```
+01234567890
+...........0
+.#.........1
+.......O.#.2
+.o#........3
+.......#...4
+....#......5
+...#...#...6
+......#....7
+O..O.......8
+........#..9
+.^.........0
+```
+
+{1, 8} is wrong answer! it must be false!
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  defstruct [:h, :w, :map, :position, :direction, :obs, :checked]
+
+  def from_input(input) do
+    m = input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&(String.split(&1, "", trim: true)))
+    
+    h = length(m)
+    w = length(hd(m))
+    
+    mi = m
+    |> Enum.map(&(Enum.with_index(&1)))
+    |> Enum.with_index()
+    
+    map = for {ls, y} <- mi, {v, x} <- ls, into: %{} do
+      {{x, y}, v}
+    end
+
+    position = start_position(map) 
+
+    %__MODULE__{h: h, w: w, map: map, position: position, direction: :up, obs: MapSet.new(), checked: MapSet.new()}
+  end
+
+  def start_position(map) do
+    map
+    |> Enum.reduce_while(:undefined, fn {k, v}, acc ->
+      case v do
+        "^" -> {:halt, k}
+        _ -> {:cont, acc}
+          end
+    end)
+  end
+
+  def next_position({x, y}, dir) do
+    case dir do
+      :up -> {x, y-1}
+      :down -> {x, y+1}
+      :left -> {x-1, y}
+      :right -> {x+1, y}        
+    end
+  end
+
+  def next_direction(dir) do
+    case dir do
+      :up -> :right
+      :down -> :left
+      :left -> :up
+      :right -> :down
+    end    
+  end
+
+  def out_of_map?(w, h, {x, y}) when x < 0 or y < 0 or x >= w or y >= h,
+    do: true
+  def out_of_map?(_, _, _), do: false
+
+  def obstructions?(map, pos) do
+    map[pos] == "#"
+  end
+
+  def routes(%__MODULE__{direction: dir, position: pos, obs: obs, checked: checked, map: map, w: w, h: h} = m) do
+    next_pos = next_position(pos, dir)
+    cond do
+      out_of_map?(w, h, next_pos) ->
+        MapSet.size(obs)
+      obstructions?(map, next_pos) ->
+        routes(%__MODULE__{m | direction: next_direction(dir)})
+      MapSet.member?(checked, next_pos) ->
+        routes(%__MODULE__{m | position: next_pos})
+      find_loop?(w, h, dir, pos, map) ->
+        routes(%__MODULE__{m |
+          position: next_pos,
+          obs: MapSet.put(obs, next_pos),
+          checked: MapSet.put(checked, next_pos)})        
+      true ->
+        routes(%__MODULE__{m | position: next_pos, checked: MapSet.put(checked, next_pos)})
+    end
+  end
+
+  def find_loop?(w, h, dir, pos, map) do
+    # Put an obstruction to next to the position
+    find_loop?(w, h, dir, pos, Map.put(map, next_position(pos, dir), "#"), MapSet.new())
+  end
+
+  def find_loop?(w, h, dir, position, map, positions) do
+    case colide_obstruction(w, h, map, position, dir) do
+      nil -> false      
+      pos ->
+        case pos != position && MapSet.member?(positions, pos) do
+          true -> true
+          _ -> find_loop?(w, h, next_direction(dir), pos, map, MapSet.put(positions, pos))
+        end
+    end    
+  end
+
+  def colide_obstruction(w, h, map, pos, dir) do
+    next_pos = next_position(pos, dir)
+    cond do
+      out_of_map?(w, h, next_pos) ->
+        nil
+      obstructions?(map, next_pos) ->
+        pos
+      true ->
+        colide_obstruction(w, h, map, next_pos, dir)
+    end
+  end
+end
+
+Part2.from_input(Kino.Input.read(input))
+|> Part2.routes()
+
+
+
+```

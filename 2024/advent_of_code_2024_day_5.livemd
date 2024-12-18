@@ -1,0 +1,177 @@
+# Advent of Code 2024 - Day 5
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 5: Print Queue
+
+https://adventofcode.com/2024/day/5
+
+<!-- livebook:{"break_markdown":true} -->
+
+Example input / output
+
+```
+47|53
+97|13
+97|61
+97|47
+75|29
+61|13
+75|53
+29|13
+97|29
+53|29
+61|53
+97|53
+61|29
+47|13
+75|47
+97|75
+47|61
+75|61
+47|29
+75|13
+53|13
+
+75,47,61,53,29
+97,61,53,29,13
+75,29,13
+75,97,47,61,53
+61,13,29
+97,13,75,29,47
+```
+
+```
+143
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+[str_rules, str_updates] = input
+|> Kino.Input.read()
+|> String.split("\n\n")
+
+rules = str_rules
+|> String.split("\n", trim: true)
+|> Enum.map(&(String.split(&1, "|")))
+|> Enum.map(&(Enum.map(&1, fn v -> String.to_integer(v) end)))
+
+updates = str_updates
+|> String.split("\n")
+|> Enum.map(&(String.split(&1, ",")))
+|> Enum.map(&(Enum.map(&1, fn v -> String.to_integer(v) end)))
+
+page_rules = Enum.reduce(rules, %{}, fn [l,r], acc -> Map.update(acc, l, [r], fn vs -> [r|vs] end) end)
+
+defmodule Day5 do
+  def print(rules, xs) do
+    Enum.reduce_while(xs, [], fn v, acc ->
+      rs = rules[v] || []
+      case Enum.any?(acc, fn v -> v in rs end) do
+        true -> {:halt, [0]}
+        false -> {:cont, [v|acc]}
+      end  
+    end)
+  end
+
+  defp slice_middle(ls) do
+    Enum.slice(ls, div(length(ls), 2), 1)
+  end
+
+  def calc(rules, updates) do
+    updates
+    |> Enum.map(&(print(rules, &1)))
+    |> Enum.map(&slice_middle/1)
+    |> List.flatten()
+    |> Enum.sum()
+  end
+end
+
+Day5.calc(page_rules, updates)
+
+```
+
+## Part Two
+
+Example input / output
+
+```
+47|53
+97|13
+97|61
+97|47
+75|29
+61|13
+75|53
+29|13
+97|29
+53|29
+61|53
+97|53
+61|29
+47|13
+75|47
+97|75
+47|61
+75|61
+47|29
+75|13
+53|13
+
+75,47,61,53,29
+97,61,53,29,13
+75,29,13
+75,97,47,61,53
+61,13,29
+97,13,75,29,47
+```
+
+```
+123
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+[str_rules, str_updates] = input
+|> Kino.Input.read()
+|> String.split("\n\n")
+
+rules = str_rules
+|> String.split("\n", trim: true)
+|> Enum.map(&(String.split(&1, "|")))
+|> Enum.map(&(Enum.map(&1, fn v -> String.to_integer(v) end)))
+
+updates = str_updates
+|> String.split("\n")
+|> Enum.map(&(String.split(&1, ",")))
+|> Enum.map(&(Enum.map(&1, fn v -> String.to_integer(v) end)))
+
+s1 = for [l, r] <- rules, into: %{} do
+  {{l, r}, true}
+end
+
+s2 = for [l, r] <- rules, into: s1 do
+  {{r, l}, false}
+end
+
+sorter = fn a, b -> s2[{a, b}] end
+
+updates
+|> Enum.map(&({&1, Enum.sort(&1, sorter)}))
+|> Enum.filter(fn {xs, ys} -> xs != ys end)
+|> Enum.map(fn {_org, sorted} -> sorted end)
+|> Enum.map(&(Enum.slice(&1, div(length(&1), 2), 1)))
+|> List.flatten()
+|> Enum.sum()
+
+```
