@@ -1,0 +1,154 @@
+# Advent of Code 2024 - Day 8
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 8: Resonant Collinearity
+
+https://adventofcode.com/2024/day/8
+
+<!-- livebook:{"break_markdown":true} -->
+
+Example input / output
+
+```
+............
+........0...
+.....0......
+.......0....
+....0.......
+......A.....
+............
+............
+........A...
+.........A..
+............
+............
+```
+
+```
+14
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+map = input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&(String.split(&1, "", trim: true)))
+
+h = length(map)
+w = length(hd(map))
+
+for {line, y} <- Enum.with_index(map), {c, x} <- Enum.with_index(line) do
+  {c, {x, y}}
+end
+|> Enum.reduce(%{}, fn {c, pos}, acc ->
+    case c do
+      "." -> acc
+      a -> Map.put(acc, a, [pos | acc[a] || []])
+    end
+  end)
+|> Map.values()
+|> Enum.map(fn ls ->
+  for a <- ls, b <- ls, a != b, do: {a, b}
+  end)
+|> Enum.map(&(Enum.reduce(&1, MapSet.new(), fn {{x1, y1}, {x2, y2}}, acc ->
+    MapSet.put(acc, {2*x2-x1, 2*y2-y1})
+  end)))
+|> Enum.reduce(MapSet.new(), &(MapSet.union(&1, &2)))
+|> Enum.filter(fn {x, y} -> x >= 0 && x < w && y >= 0 && y < h end)
+|> Enum.count()
+```
+
+## Part Two
+
+Example input / output
+
+```
+T.........
+...T......
+.T........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+```
+
+```
+9
+```
+
+```
+............
+........0...
+.....0......
+.......0....
+....0.......
+......A.....
+............
+............
+........A...
+.........A..
+............
+............
+```
+
+```
+34
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+map = input
+|> Kino.Input.read()
+|> String.split("\n", trim: true)
+|> Enum.map(&(String.split(&1, "", trim: true)))
+
+h = length(map)
+w = length(hd(map))
+
+antinodes = fn {x1, y1}, {x2, y2} -> 
+  xv = x2 - x1
+  yv = y2 - y1
+  Stream.unfold({x2, y2}, fn {x3, y3} ->
+    cond do
+      x3 < 0 || x3 >= w || y3 < 0 || y3 >= h ->
+        nil
+      true ->
+        {{x3, y3}, {x3+xv, y3+yv}}
+    end
+  end)
+  |> Enum.to_list()
+end
+
+
+for {line, y} <- Enum.with_index(map), {c, x} <- Enum.with_index(line) do
+  {c, {x, y}}
+end
+|> Enum.reduce(%{}, fn {c, pos}, acc ->
+    case c do
+      "." -> acc
+      a -> Map.put(acc, a, [pos | acc[a] || []])
+    end
+  end)
+|> Map.values()
+|> Enum.flat_map(fn ls ->
+  for a <- ls, b <- ls, a != b, do: {a, b}
+  end)
+|> Enum.flat_map(fn {a, b} -> antinodes.(a, b) end)
+|> MapSet.new()
+|> MapSet.size()
+```
