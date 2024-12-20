@@ -1,0 +1,72 @@
+# Advent of Code 2024 - Day 11
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 11: Plutonian Pebbles
+
+Example input / output
+
+```
+Initial arrangement:
+125 17
+
+After 1 blink:
+253000 1 7
+
+After 2 blinks:
+253 0 2024 14168
+
+After 3 blinks:
+512072 1 20 24 28676032
+
+After 4 blinks:
+512 72 2024 2 0 2 4 2867 6032
+
+After 5 blinks:
+1036288 7 2 20 24 4048 1 4048 8096 28 67 60 32
+
+After 6 blinks:
+2097446912 14168 4048 2 0 2 4 40 48 2024 40 48 80 96 2 8 6 7 6 0 3 2
+
+In this example, after blinking six times, you would have 22 stones.
+After blinking 25 times, you would have 55312 stones!
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day11 do
+  def blink(n, acc) when is_integer(n) do
+    cond do
+      n == 0 -> [1 | acc]
+      rem(to_string(n) |> String.length(), 2) == 0
+        -> sn = to_string(n)
+        {a, b} = String.split_at(sn, div(String.length(sn), 2))
+        [String.to_integer(b), String.to_integer(a) | acc]
+      true -> [n * 2024 | acc]
+    end
+  end
+
+  def blink(arr, acc) when is_list(arr) do
+    Enum.reduce(arr, acc, &blink/2)
+  end
+end
+
+line = input
+|> Kino.Input.read()
+|> String.split(" ", trim: true)
+|> Enum.map(&String.to_integer/1)
+
+Enum.reduce(1..25, line, fn _i, acc ->
+  Day11.blink(acc, [])
+end)
+|> Enum.count()
+```
+
+## Part Two
