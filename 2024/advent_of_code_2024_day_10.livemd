@@ -1,0 +1,271 @@
+# Advent of Code 2024 - Day 10
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 10: Hoof It
+
+Example input / output
+
+```
+...0...
+...1...
+...2...
+6543456
+7.....7
+8.....8
+9.....9
+```
+
+```
+2
+```
+
+```
+..90..9
+...1.98
+...2..7
+6543456
+765.987
+876....
+987....
+```
+
+```
+4
+```
+
+```
+10..9..
+2...8..
+3...7..
+4567654
+...8..3
+...9..2
+.....01
+```
+
+```
+3
+```
+
+```
+89010123
+78121874
+87430965
+96549874
+45678903
+32019012
+01329801
+10456732
+```
+
+```
+36
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day10 do
+  defstruct [:map, :w, :h]
+
+  def from_input(input) do
+    board = input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&(String.split(&1, "", trim: true)))
+    |> Enum.map(&(
+      Enum.map(&1, fn
+        "." -> -1
+        s -> String.to_integer(s)
+      end)
+    ))
+
+    h = length(board)
+    w = length(hd(board))
+    
+    li = board
+    |> Enum.map(&Enum.with_index/1)
+    |> Enum.with_index()
+    
+    map = 
+    for {ls, y} <- li, {v, x} <- ls, into: %{} do
+      {{x, y}, v}
+    end
+
+    %__MODULE__{w: w, h: h, map: map}
+  end
+
+  def calc(%__MODULE__{w: w, h: h, map: map}) do
+    for {pos, v} <- map, v == 0 do
+      pos
+    end
+    |> Enum.map(fn zero -> search({map, w, h, -1, zero}, MapSet.new()) end)
+    |> Enum.map(&Enum.count/1)
+    |> Enum.sum()
+  end
+  
+  def search({_map, w, h, _v, {x, y}}, acc) when x < 0 or y < 0 or x >= w or y >= h,
+    do: acc
+  def search({map, _w, _h, 8, pos}, acc) do
+    case map[pos] do
+      9 -> MapSet.put(acc, pos)
+      _ -> acc
+    end
+  end
+  def search({map, w, h, v, {x, y}}, acc) do
+    case map[{x, y}] - 1 do
+      ^v ->        
+        acc1 = search({map, w, h, v + 1, {x + 1, y}}, acc)
+        acc2 = search({map, w, h, v + 1, {x - 1, y}}, acc1)
+        acc3 = search({map, w, h, v + 1, {x, y + 1}}, acc2)
+        search({map, w, h, v + 1, {x, y - 1}}, acc3)        
+      _ -> acc
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Day10.from_input()
+|> Day10.calc()
+
+
+```
+
+## Part Two
+
+Example input / output
+
+```
+.....0.
+..4321.
+..5..2.
+..6543.
+..7..4.
+..8765.
+..9....
+```
+
+```
+3
+```
+
+```
+..90..9
+...1.98
+...2..7
+6543456
+765.987
+876....
+987....
+```
+
+```
+13
+```
+
+```
+012345
+123456
+234567
+345678
+4.6789
+56789.
+```
+
+```
+227
+```
+
+```
+89010123
+78121874
+87430965
+96549874
+45678903
+32019012
+01329801
+10456732
+```
+
+```
+81
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  defstruct [:map, :w, :h]
+
+  def from_input(input) do
+    board = input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&(String.split(&1, "", trim: true)))
+    |> Enum.map(&(
+      Enum.map(&1, fn
+        "." -> -1
+        s -> String.to_integer(s)
+      end)
+    ))
+
+    h = length(board)
+    w = length(hd(board))
+    
+    li = board
+    |> Enum.map(&Enum.with_index/1)
+    |> Enum.with_index()
+    
+    map = 
+    for {ls, y} <- li, {v, x} <- ls, into: %{} do
+      {{x, y}, v}
+    end
+
+    %__MODULE__{w: w, h: h, map: map}
+  end
+
+  def calc(%__MODULE__{w: w, h: h, map: map}) do
+    for {pos, v} <- map, v == 0 do
+      pos
+    end
+    |> Enum.map(&(search(map, w, h, -1, &1)))
+    |> Enum.sum()
+  end
+  
+  def search(_map, w, h, _v, {x, y}) when x < 0 or y < 0 or x >= w or y >= h,
+    do: 0
+  def search(map, _w, _h, 8, pos) do
+    case map[pos] do
+      9 -> 1
+      _ -> 0
+    end
+  end
+  def search(map, w, h, v, {x, y}) do
+    case map[{x, y}] - 1 do
+      ^v ->
+        Enum.sum([
+          search(map, w, h, v + 1, {x + 1, y}),
+          search(map, w, h, v + 1, {x - 1, y}),
+          search(map, w, h, v + 1, {x, y + 1}),
+          search(map, w, h, v + 1, {x, y - 1})                  
+        ])
+      _ -> 0
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Part2.from_input()
+|> Part2.calc()
+
+
+```
