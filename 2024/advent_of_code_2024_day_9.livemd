@@ -1,0 +1,140 @@
+# Advent of Code 2024 - Day 9
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 9: Disk Fragmenter
+
+https://adventofcode.com/2024/day/9
+
+Example input / output
+
+```
+2333133121414131402
+```
+
+```
+1928
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day9 do
+  def gen({_, _, _mode, _blocks, len, i}) when i == len, do: nil
+  def gen({[{0, _}| rest], rfiles, blocks, :file, len, i}),
+    do: gen({rest, rfiles, blocks, :block, len, i})
+  def gen({[{n, id}|rest], rfiles, blocks, :file, len, i}),
+    do: {id, {[{n-1, id}|rest], rfiles, blocks, :file, len, i+1}}
+  def gen({files, rfiles, [0|rest], :block, len, i}),
+    do: gen({files, rfiles, rest, :file, len, i})
+  def gen({files, [{0, _id}| rest], blocks, mode, len, i}),
+    do: gen({files, rest, blocks, mode, len, i})
+  def gen({files, [{n, id}| frest], [b| brest], :block, len, i}),
+    do: {id, {files, [{n-1, id}| frest], [b-1| brest], :block, len, i+1}}
+end
+
+ls = input
+|> Kino.Input.read()
+|> String.split("", trim: true)
+|> Enum.map(&String.to_integer/1)
+
+files = ls
+|> Enum.take_every(2)
+|> Enum.with_index() # id
+
+rfiles = Enum.reverse(files)
+
+blocks = ls
+|> tl()
+|> Enum.take_every(2)
+
+len = files
+|> Enum.reduce(0, fn {f, _i}, acc -> acc + f end)
+
+Stream.unfold({files, rfiles, blocks, :file, len, 0}, &Day9.gen/1)
+|> Enum.to_list()
+|> Enum.with_index()
+|> Enum.reduce(0, fn {v, i}, acc -> acc + v* i end)
+
+```
+
+## Part Two
+
+https://adventofcode.com/2024/day/9
+
+Example input / output
+
+```
+2333133121414131402
+```
+
+```
+2858
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  def gen([]), do: nil
+  def gen([{1, :f, id}| rest]),
+    do: {id, rest}
+  def gen([{1, :b}| rest]),
+    do: {".", rest}
+  def gen([{n, :f, id}| rest]),
+    do: {id, [{n-1, :f, id} | rest]}
+  def gen([{n, :b}| rest]),
+    do: {".", [{n-1, :b}| rest]}
+end
+
+drive = input
+|> Kino.Input.read()
+|> String.split("", trim: true)
+|> Enum.map(&String.to_integer/1)
+|> Enum.with_index()
+|> Enum.reduce([], fn {v, i}, acc ->
+  case rem(i, 2) do
+    0 -> [{v, :f, div(i, 2)}|acc]
+    1 when v == 0 -> acc
+    1 -> [{v, :b}|acc]
+  end
+end)
+|> Enum.reverse()
+
+
+files = drive
+|> Enum.reduce([], fn
+  {_v, :b}, acc -> acc
+  f, acc -> [f | acc]
+end)
+
+Enum.reduce(files, drive, fn {v, :f, id}, acc ->
+  {dr, _flag} = 
+  Enum.reduce(acc, {[], false}, fn
+    {^v, :f, ^id}, {dr, true} -> {[{v, :b} | dr], true}  # replace file to block
+    {^v, :f, ^id}=file, {dr, false} -> {[file|dr], true} # search end
+    fb, {dr, true} -> {[fb|dr], true}
+    {_val, :b}=block, {dr, true} -> {[block|dr], true}
+    {val, :b}=block, {dr, false} when val < v -> {[block|dr], false}
+    {val, :b}, {dr, false} when val == v -> {[{v, :f, id}|dr], true}
+    {val, :b}, {dr, false} when val > v -> {[{val-v, :b}, {v, :f, id}|dr], true}
+    file, {dr, false} -> {[file|dr], false}
+  end)
+
+  Enum.reverse(dr)
+end)
+|> Stream.unfold(&Part2.gen/1)
+|> Enum.to_list()
+|> Enum.map(&(if &1 == "." do 0 else &1 end))
+|> Enum.with_index()
+|> Enum.reduce(0, fn {v, i}, acc -> acc + v*i end)
+
+```
