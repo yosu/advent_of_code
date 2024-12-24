@@ -1,0 +1,128 @@
+# Advent of Code 2024 - Day 13
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 13: Claw Contraption
+
+https://adventofcode.com/2024/day/13
+
+Example input / output
+
+```
+Button A: X+94, Y+34
+Button B: X+22, Y+67
+Prize: X=8400, Y=5400
+
+Button A: X+26, Y+66
+Button B: X+67, Y+21
+Prize: X=12748, Y=12176
+
+Button A: X+17, Y+86
+Button B: X+84, Y+37
+Prize: X=7870, Y=6450
+
+Button A: X+69, Y+23
+Button B: X+27, Y+71
+Prize: X=18641, Y=10279
+```
+
+```
+280
+
+0
+
+200
+
+480
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day13 do
+  defstruct [:ax, :ay, :bx, :by, :px, :py, :ac, :bc]
+  def from_input(input) do
+    ["Button A: " <> l1,
+     "Button B: " <> l2,
+     "Prize: " <> l3]
+      = input
+      |> String.split("\n")
+
+    ["X+" <> axs, "Y+" <> ays] = String.split(l1, ", ")
+    ["X+" <> bxs, "Y+" <> bys] = String.split(l2, ", ")
+    ["X=" <> pxs, "Y=" <> pys] = String.split(l3, ", ")
+
+    [ax, ay, bx, by, px, py] =
+    [axs, ays, bxs, bys, pxs, pys]
+    |> Enum.map(&String.to_integer/1)
+
+    %__MODULE__{ax: ax, ay: ay, bx: bx, by: by, px: px, py: py, ac: 3, bc: 1}
+  end
+
+  def calc(%__MODULE__{ax: ax, ay: ay, bx: bx, by: by, px: px, py: py, ac: ac, bc: bc}) do
+    amax = min(div(px, ax), div(py, ay))
+    bmax = min(div(px, bx), div(py, by))
+
+    results = 
+    for a <- 0..amax, b <- 0..bmax do
+      case {a*ax + b*bx, a*ay + b*by} do
+        {^px, ^py} -> a*ac + b*bc
+        _ -> -1
+      end
+    end
+    |> Enum.filter(&(&1 != -1))
+
+    case results do
+      [] -> 0
+      arr -> Enum.min(arr)
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> String.split("\n\n", trim: true)
+|> Enum.map(&Day13.from_input/1)
+|> Enum.map(&Day13.calc/1)
+|> Enum.sum()
+```
+
+## Part 2
+
+Example input / output
+
+```
+Button A: X+94, Y+34
+Button B: X+22, Y+67
+Prize: X=10000000008400, Y=10000000005400
+
+Button A: X+26, Y+66
+Button B: X+67, Y+21
+Prize: X=10000000012748, Y=10000000012176
+
+Button A: X+17, Y+86
+Button B: X+84, Y+37
+Prize: X=10000000007870, Y=10000000006450
+
+Button A: X+69, Y+23
+Button B: X+27, Y+71
+Prize: X=10000000018641, Y=10000000010279
+```
+
+```
+???
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input")
+```
+
+```elixir
+
+```
