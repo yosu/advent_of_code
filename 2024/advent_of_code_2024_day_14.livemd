@@ -1,0 +1,259 @@
+# Advent of Code 2024 - Day 14
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 14: Restroom Redoubt
+
+https://adventofcode.com/2024/day/14
+
+Example input / output
+
+```
+p=0,4 v=3,-3
+p=6,3 v=-1,-3
+p=10,3 v=-1,2
+p=2,0 v=2,-1
+p=0,0 v=1,3
+p=3,0 v=-2,-2
+p=7,6 v=-1,-3
+p=3,0 v=-1,-2
+p=9,3 v=2,3
+p=7,3 v=-1,2
+p=2,4 v=2,-3
+p=9,5 v=-3,-3
+```
+
+After 100 seconds
+
+```
+......2..1.
+...........
+1..........
+.11........
+.....1.....
+...12......
+.1....1....
+```
+
+Answer
+
+```
+12
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input")
+```
+
+```elixir
+defmodule Day14 do
+  defstruct [:robots]
+
+  @w 101
+  @h 103
+
+  def from_input(input) do
+    robots = input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&from_line/1)
+
+    %__MODULE__{robots: robots}
+  end
+
+  defp from_line(line) do
+    ["p=" <> ps, "v=" <> vs] = line
+    |> String.split(" ")
+
+    [x, y] = ps
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.to_integer/1)
+
+    [vx, vy] = vs
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.to_integer/1)
+    
+    {{x, y}, {vx, vy}}
+  end
+
+  def inc(%__MODULE__{robots: rs}) do
+    robots = rs
+    |> Enum.map(fn {pos, v} ->
+      {inc({pos, v}), v}
+    end)
+
+    %__MODULE__{robots: robots}
+  end
+
+  def inc({{x, y}, {vx, vy}}) do
+    {inc(x, vx, @w), inc(y, vy, @h)}
+  end
+
+  defp inc(p, v, max) when v > 0, do: rem(p + v, max)
+  defp inc(p, v, max), do: rem(max + p + v, max)
+
+  def quardrant(%__MODULE__{robots: robots}) do
+    map = robots
+    |> Enum.map(fn {pos, _v} -> pos end)
+    |> Enum.frequencies()
+    
+    a = for x <- 0..(div(@w, 2)-1), y <- 0..(div(@h, 2)-1), reduce: 0 do
+      acc -> acc + (map[{x, y}] || 0)
+    end
+
+    b = for x <- (div(@w, 2)+1)..@w, y <- 0..(div(@h, 2)-1), reduce: 0 do
+      acc -> acc + (map[{x, y}] || 0)
+    end
+
+    c = for x <- 0..(div(@w, 2)-1), y <- (div(@h, 2)+1)..@h, reduce: 0 do
+      acc -> acc + (map[{x, y}] || 0)
+    end
+
+    d = for x <- (div(@w, 2)+1)..@w, y <- (div(@h, 2)+1)..@h, reduce: 0 do
+      acc -> acc + (map[{x, y}] || 0)
+    end
+
+    [a, b, c, d]
+  end
+end
+
+d = input
+|> Kino.Input.read()
+|> Day14.from_input()
+
+
+1..100
+|> Enum.reduce(d, fn _, acc ->
+  Day14.inc(acc)
+end)
+|> Day14.quardrant()
+|> Enum.product()
+  
+
+```
+
+## Part Two
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  defstruct [:robots, :positions]
+
+  @w 101
+  @h 103
+
+  def from_input(input) do
+    robots = input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&from_line/1)
+
+    %__MODULE__{robots: robots, positions: MapSet.new()}
+  end
+
+  defp from_line(line) do
+    ["p=" <> ps, "v=" <> vs] = line
+    |> String.split(" ")
+
+    [x, y] = ps
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.to_integer/1)
+
+    [vx, vy] = vs
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.to_integer/1)
+    
+    {{x, y}, {vx, vy}}
+  end
+
+  def inc(%__MODULE__{robots: rs, positions: ps}) do
+    robots = rs
+    |> Enum.map(fn {pos, v} ->
+      {inc({pos, v}), v}
+    end)
+
+    positions = robots
+    |> Enum.reduce(ps, fn {pos, _v}, acc -> 
+      MapSet.put(acc, pos)
+    end)
+
+    %__MODULE__{robots: robots, positions: positions}
+  end
+
+  def inc({{x, y}, {vx, vy}}) do
+    {inc(x, vx, @w), inc(y, vy, @h)}
+  end
+
+  defp inc(p, v, max) when v > 0, do: rem(p + v, max)
+  defp inc(p, v, max), do: rem(max + p + v, max)
+
+  def print(%__MODULE__{positions: positions}) do
+    for y <- 0..(@h-1) do
+      0..(@w-1)
+      |> Enum.map(fn x ->
+        case MapSet.member?(positions, {x, y}) do
+          true -> "X"
+          _ -> " "
+        end
+      end)
+      |> Enum.join()
+    end
+    |> Enum.map(&IO.inspect/1)
+  end
+
+  def bitmap(%__MODULE__{positions: positions}) do
+    data = 
+    for y <- 0..(@h-1), x <- 0..(@w-1),  reduce: [] do
+      acc ->
+        case MapSet.member?(positions, {x, y}) do
+          true -> [0 | acc]
+          _ -> [255 | acc]
+        end
+    end
+    |> :binary.list_to_bin()
+
+    Kino.Image.new(<<@h::32, @w::32, 1::8>> <>  data, "image/x-pixel")
+  end
+  
+  def bitmapr(%__MODULE__{robots: robots}) do
+    positions = robots
+      |> Enum.reduce(MapSet.new(), fn {pos, _v}, acc ->
+        MapSet.put(acc, pos)
+      end)
+    
+    data = 
+    for y <- 0..(@h-1), x <- 0..(@w-1),  reduce: [] do
+      acc ->
+        case MapSet.member?(positions, {x, y}) do
+          true -> [0 | acc]
+          _ -> [200 | acc]
+        end
+    end
+    |> :binary.list_to_bin()
+
+    Kino.Image.new(<<@h::32, @w::32, 1::8>> <>  data, "image/x-pixel")
+  end
+end
+
+
+d = input
+|> Kino.Input.read()
+|> Part2.from_input()
+
+1..(88)
+|> Enum.reduce(d, fn _i, acc ->
+  Part2.inc(acc)
+  end)
+|> Part2.bitmapr()
+
+#Stream.cycle([255, 255, 128, 128, 64, 64, 0, 0])
+#|> Enum.take(256)
+#|> :binary.list_to_bin()
+
+#Kino.Image.new(<<64::32, 4::32, 1::8, 255,128,64,0,>>, "image/x-pixel")
+```
