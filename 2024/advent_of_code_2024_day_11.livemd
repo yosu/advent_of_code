@@ -36,6 +36,14 @@ In this example, after blinking six times, you would have 22 stones.
 After blinking 25 times, you would have 55312 stones!
 ```
 
+```
+0 7 6618216 26481 885 42 202642 8791
+```
+
+```
+213625
+```
+
 ```elixir
 input = Kino.Input.textarea("Please paste the input:")
 ```
@@ -70,3 +78,50 @@ end)
 ```
 
 ## Part Two
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Part2 do
+  def blink(cache, _v, 0), do: {cache, 1}
+  def blink(cache, v, n) do
+    new_cache = 
+    cond do
+      cache[{v, n}] -> cache
+      v == 0 ->
+        {ch, val} = blink(cache, 1, n-1)
+        Map.put(ch, {v, n}, val)
+      rem(to_string(v) |> String.length(), 2) == 0 ->
+        sn = to_string(v)
+        {a, b} = String.split_at(sn, div(String.length(sn), 2))
+        {ch1, val1} = blink(cache, String.to_integer(b), n-1)
+        {ch2, val2} = blink(ch1, String.to_integer(a), n-1)
+        Map.put(ch2, {v, n}, val1 + val2)
+      true ->
+        {ch, val} = blink(cache, v * 2024, n - 1)
+        Map.put(ch, {v, n}, val)
+    end
+    {new_cache, new_cache[{v, n}]}
+  end
+end
+
+line = input
+|> Kino.Input.read()
+|> String.split(" ", trim: true)
+|> Enum.map(&String.to_integer/1)
+
+
+{v, _} = line
+|> Enum.reduce({0, %{}}, fn v, {total, cache} ->
+  {ch, val} = Part2.blink(cache, v, 75)
+  {total+val, ch}
+  end)
+
+v
+
+
+
+
+```
