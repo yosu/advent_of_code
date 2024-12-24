@@ -1,0 +1,276 @@
+# Advent of Code 2024 - Day 15
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.2"}
+])
+```
+
+## Day 15: Warehouse Woes
+
+https://adventofcode.com/2024/day/15
+
+Example input output
+
+### Small Example
+
+```
+########
+#..O.O.#
+##@.O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+<^^>>>vv<v>>v<<
+```
+
+Last position
+
+```
+########
+#....OO#
+##.....#
+#.....O#
+#.#O@..#
+#...O..#
+#...O..#
+########
+```
+
+GPS
+
+```
+2028
+```
+
+### Large Example
+
+```
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+```
+
+Last position
+
+```
+##########
+#.O.O.OOO#
+#........#
+#OO......#
+#OO@.....#
+#O#.....O#
+#O.....OO#
+#O.....OO#
+#OO....OO#
+##########
+```
+
+GPS
+
+```
+10092
+```
+
+```elixir
+input = Kino.Input.textarea("Please paste the input:")
+```
+
+```elixir
+defmodule Day15 do
+  defstruct [:map, :pos, :moves]
+
+  def from_input(input) do
+    [ms, move] = input
+    |> String.split("\n\n", trim: true)
+    
+    
+    moves = move
+    |> String.split("", trim: true)
+    |> Enum.filter(&(&1 != "\n"))
+    
+    m = ms
+    |> String.split("\n", trim: true)
+    |> Enum.map(&(String.split(&1, "", trim: true)))
+    |> Enum.map(&Enum.with_index/1)
+    |> Enum.with_index()
+
+    map = 
+    for {lm, y} <- m, {v, x} <- lm, into: %{} do
+      {{x, y}, v}
+    end
+
+    {pos, _} = Enum.find(map, nil, fn {_pos, v} ->
+      v == "@"
+      end)
+
+    %__MODULE__{map: map, pos: pos, moves: moves}
+  end
+
+  defp next_pos({x, y}, "<"), do: {x-1, y}
+  defp next_pos({x, y}, "^"), do: {x, y-1}
+  defp next_pos({x, y}, ">"), do: {x+1, y}
+  defp next_pos({x, y}, "v"), do: {x, y+1}
+
+  defp reverse("<"), do: ">"
+  defp reverse("^"), do: "v"
+  defp reverse(">"), do: "<"
+  defp reverse("v"), do: "^"
+
+  defp prev_pos(pos, dir), do: next_pos(pos, reverse(dir))
+
+  def find_space(map, pos, dir) do
+    np = next_pos(pos, dir)
+    case map[np] do
+      "." -> np
+      "O" -> find_space(map, np, dir)
+      "#" -> nil
+    end
+  end
+
+  def move(map, pos, dir) do
+    case find_space(map, pos, dir) do
+      nil -> {map, pos}
+      to -> move_to(map, pos, to, dir)
+    end    
+  end
+
+  def move_to(map, {x, y}, {xt, yt}, dir) do
+    m =
+    for xx <- x..xt, yy <- yt..y, reduce: map do
+      acc -> Map.put(acc, {xx, yy}, map[prev_pos({xx, yy}, dir)])
+    end
+
+    {Map.put(m, {x, y}, "."), next_pos({x, y}, dir)}
+  end
+
+  def inc(%__MODULE__{moves: []}= m), do: m
+  def inc(%__MODULE__{map: m, pos: p, moves: [mv|rest]}) do
+    {map, pos} = move(m, p, mv)
+    %__MODULE__{map: map, pos: pos, moves: rest}
+  end
+
+  def finished?(%__MODULE__{moves: []}), do: true
+  def finished?(_), do: false
+
+  def print(%__MODULE__{map: map}=m) do
+    positions = map
+    |> Map.keys()
+    |> Enum.sort()
+
+    mx = positions
+    |> Enum.map(&(elem(&1, 0)))
+    |> Enum.max()
+
+    my = positions
+    |> Enum.map(&(elem(&1, 1)))
+    |> Enum.max()
+
+    for y <- 0..my, reduce: [] do
+      acc ->
+        values =
+        for x <- 0..mx do
+          map[{x, y}]
+        end
+        
+        [Enum.join(values) |acc]
+    end
+    |> Enum.reverse()
+    |> Enum.join("\n")
+    |> IO.puts()
+
+    m
+  end
+
+  def run(%__MODULE__{}=m) do
+    case finished?(m) do
+      true -> m
+      _ -> m |> inc() |> run()
+    end
+  end
+
+  def gps(%__MODULE__{map: map}) do
+    for {{x, y}, v} <- map, reduce: 0 do
+      acc -> case v do
+        "O" -> acc + x + y*100
+        _ -> acc
+      end
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Day15.from_input()
+|> Day15.run()
+|> Day15.print()
+|> Day15.gps()
+
+
+```
+
+## Part Two
+
+Example input / output
+
+```
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+```
+
+```
+####################
+##[].......[].[][]##
+##[]...........[].##
+##[]........[][][]##
+##[]......[]....[]##
+##..##......[]....##
+##..[]............##
+##..@......[].[][]##
+##......[][]..[]..##
+####################
+```
+
+```
+9021
+```
